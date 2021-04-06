@@ -1,9 +1,29 @@
-import { router } from './app.js';
+import { hereCredentials } from './config.js';
+import { router, geocoder } from './app.js';
+
+const autocompleteGeocodeUrl = (query) => 
+`https://autocomplete.geocoder.ls.hereapi.com/6.2/suggest.json?apiKey=${hereCredentials.apikey}
+&resultType=areas
+&query=${query}`
+
+const requestGeocode = locationid => {
+   return new Promise((resolve, reject) => {
+      geocoder.geocode(
+         { locationid },
+         res => {
+            const coordinates = res.Response.View[0].Result[0].Location.DisplayPosition;
+            resolve(coordinates);
+         },
+         err => reject(err)
+      )
+   })
+}
 
 const isolineMaxRange = {
    time: 32400, //seconds
    distance: 80000 //meters
 }
+
 
 const requestIsolineShape = options => {
    const params = {
@@ -24,6 +44,11 @@ const requestIsolineShape = options => {
          err => reject(err)
       );
    })
-}  
+}
 
-export { requestIsolineShape, isolineMaxRange }
+export { 
+   autocompleteGeocodeUrl, 
+   isolineMaxRange,
+   requestGeocode,
+   requestIsolineShape
+}

@@ -1,8 +1,8 @@
 import hereCredentials from '../hereConfig.js'
 
 const center = { 
-   lat: 52.5159, 
-   lng: 13.3777, 
+   lat: 30.5788, 
+   lng: -97.8531, 
    text: 'Berlin, Germany'
 }
 

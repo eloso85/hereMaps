@@ -2,6 +2,54 @@
 import { $, $$, to24HourFormat, formatRangeLabel, toDateInputFormat } from './helpers.js';
 import { center, hereCredentials } from './config.js';
 import { isolineMaxRange, requestIsolineShape } from './here.js';
+import HourFilter from './HourFilter.js';
+import MapRotation from './MapRotation.js';
+import Search from './Search.js';
+
+
+new Search('');
+//Manage initial state
+$('#slider-val').innerText = formatRangeLabel($('#range').value, 'time');
+$('#date-value').value = toDateInputFormat(new Date()); 
+
+//Add event listeners
+$$('.isoline-controls').forEach(c => c.onchange = () => calculateIsoline());
+$$('.view-controls').forEach(c => c.onchange = () => calculateView());
+
+//Tab control for sidebar
+const tabs = $$('.tab');
+tabs.forEach(t => t.onclick = tabify)
+function tabify(evt) {
+   tabs.forEach(t => t.classList.remove('tab-active'));
+   if (evt.target.id === 'tab-1') {
+      $('.tab-bar').style.transform = 'translateX(0)';
+      evt.target.classList.add('tab-active');
+      $('#content-group-1').style.transform = 'translateX(0)';
+      $('#content-group-2').style.transform = 'translateX(100%)';
+   } else {
+      $('.tab-bar').style.transform = 'translateX(100%)';
+      evt.target.classList.add('tab-active');
+      $('#content-group-1').style.transform = 'translateX(-100%)';
+      $('#content-group-2').style.transform = 'translateX(0)';
+   }
+}
+
+//Theme control
+const themeTiles = $$('.theme-tile');
+themeTiles.forEach(t => t.onclick = tabifyThemes);
+function tabifyThemes(evt) {
+   themeTiles.forEach(t => t.classList.remove('theme-tile-active'));
+   evt.target.classList.add('theme-tile-active');
+   if (evt.target.id === 'day') {
+      const style = new H.map.Style('https://js.api.here.com/v3/3.1/styles/omv/normal.day.yaml')
+      provider.setStyle(style);
+   } else { 
+      const style = new H.map.Style('./resources/night.yaml');
+      provider.setStyle(style);
+   }
+}
+
+
 
 //Height calculations
 const height = $('#content-group-1').clientHeight || $('#content-group-1').offsetHeight;
@@ -24,7 +72,7 @@ const geocoder = platform.getGeocodingService();
 
 window.addEventListener('resize', () => map.getViewPort().resize());
 
-export { router, geocoder }
+//export { router, geocoder }
 
 let polygon;
 const marker = new H.map.Marker(center, {volatility: true});
@@ -48,6 +96,8 @@ map.addEventListener('drag', evt => {
    }
 }, false);
 
+//calculateIso
+const hourFilter = new HourFilter();
 async function calculateIsoline() {
     console.log('updating...')
  
@@ -97,6 +147,38 @@ async function calculateIsoline() {
       }
    });
    map.addObject(polygon);
+   
+   if (options.mode === 'car' && options.rangeType === 'time') {
+    const promises = [];
+    for (let i = 0; i < 24; i++) {
+       options.time = to24HourFormat(i);
+       promises.push(requestIsolineShape(options))
+    }
+    const polygons = await Promise.all(promises);
+    const areas = polygons.map(x => turf.area(turf.polygon([x])));
+    hourFilter.setData(areas);
+ } else {
+    hourFilter.hideData();
+ }
  }
  calculateIsoline();
+
+ //map rotation
+const rotation = new MapRotation(map);
+function calculateView() {
+   const options = {
+      theme: $('#day').checked ? 'day' : 'night',
+      static: $('#static').checked 
+   }
+   if (options.static) {
+      rotation.stop();
+   } else {
+      rotation.start();
+   }
+}
+
+ export { calculateIsoline, marker, router, geocoder }
+
+
+ 
 
